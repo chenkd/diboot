@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.TypeHandler;
 import org.springframework.core.annotation.AnnotationUtils;
 
+import javax.lang.model.type.NullType;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -174,7 +175,7 @@ public class ParserCache {
     public static BaseMapper getMapperInstance(Class<?> entityClass){
         BaseMapper mapper = BindingCacheManager.getMapperByClass(entityClass);
         if(mapper == null){
-            throw new InvalidUsageException("exception.invalidUsage.parserCache.getMapperInstance.message", entityClass.getName());
+            throw new InvalidUsageException("未找到 {} 的Mapper定义！", entityClass.getName());
         }
         return mapper;
     }
@@ -214,7 +215,8 @@ public class ParserCache {
         Map<String, String> joinOn2Alias = new HashMap<>(8);
         // 构建AnnoJoiner
         BiConsumer<Field, BindQuery> buildAnnoJoiner = (field, query) -> {
-            AnnoJoiner annoJoiner = new AnnoJoiner(field, query);
+            PropInfo propInfo = BindingCacheManager.getPropInfoByClass(query.entity() != null && !NullType.class.equals(query.entity())? query.entity() : dtoClass);
+            AnnoJoiner annoJoiner = new AnnoJoiner(propInfo, field, query);
             // 关联对象，设置别名
             if (V.notEmpty(annoJoiner.getJoin())) {
                 String key = annoJoiner.getJoin() + ":" + annoJoiner.getCondition();
@@ -313,7 +315,7 @@ public class ParserCache {
             List<String> maskFieldList = new ArrayList<>(4);
             for (Field field : BeanUtils.extractFields(clazz, DataMask.class)) {
                 if (!field.getType().isAssignableFrom(String.class)) {
-                    throw new InvalidUsageException("exception.invalidUsage.parserCache.getDataMaskFieldList.message");
+                    throw new InvalidUsageException("`@DataMask` 仅支持 String 类型字段。");
                 }
                 maskFieldList.add(field.getName());
             }

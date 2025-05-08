@@ -15,20 +15,6 @@ const views = Object.keys(modules).reduce(
   {}
 )
 
-/**
- * 构建视图名称路径映射
- */
-export const buildViewMap = async () => {
-  const map: Record<string, string> = {}
-  await Promise.all(
-    Object.keys(views).map(async path => {
-      const view = (await views[path]()).default
-      if (view.name) map[view.name] = path
-    })
-  )
-  return map
-}
-
 // 动态渲染组件
 const renderComponent = (name: string, callback: (cachedViews: string[]) => VNode) =>
   defineComponent({
@@ -136,7 +122,7 @@ export const getMenuTree = () => {
     if (!name) return
     const index = routeTree.findIndex(e => e.name === name)
     const find = index > -1 ? routeTree.splice(index, 1)[0] : routes.find(e => e.name === name)
-    find && arr.push(find)
+    if (find) arr.push(find)
   }
 
   for (const route of routes) {
@@ -166,7 +152,7 @@ export const getMenuTree = () => {
         routes.push(child)
       } else {
         route.children = filterMenu(route.children)
-        route.children.length && routes.push(route)
+        if (route.children.length) routes.push(route)
       }
     }
     return routes

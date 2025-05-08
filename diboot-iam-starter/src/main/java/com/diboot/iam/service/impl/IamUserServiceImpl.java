@@ -33,6 +33,7 @@ import com.diboot.iam.entity.*;
 import com.diboot.iam.mapper.IamUserMapper;
 import com.diboot.iam.service.*;
 import com.diboot.iam.util.IamSecurityUtils;
+import com.diboot.iam.vo.IamUserPositionVO;
 import com.diboot.iam.vo.IamUserVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -194,6 +195,7 @@ public class IamUserServiceImpl extends BaseServiceImpl<IamUserMapper, IamUser> 
         if (V.notEmpty(id)){
             wrapper.ne(IamUser::getId, id);
         }
+        wrapper.orderByDesc(IamUser::getId);
         return exists(wrapper);
     }
 
@@ -290,7 +292,7 @@ public class IamUserServiceImpl extends BaseServiceImpl<IamUserMapper, IamUser> 
             return voList;
         }
         for (IamUserVO user : voList) {
-            List<IamUserPosition> userPositionList = user.getUserPositionList();
+            List<IamUserPositionVO> userPositionList = user.getUserPositionList();
             if (V.notEmpty(userPositionList)) {
                 user.setUserPositionList(userPositionList.stream().filter(p -> orgIds.contains(p.getOrgId())).collect(Collectors.toList()));
             }
@@ -317,7 +319,7 @@ public class IamUserServiceImpl extends BaseServiceImpl<IamUserMapper, IamUser> 
                 .setOrgId(latestInfo.getOrgId());
     }
 
-    /***
+    /**
      * 检查重复用户编号
      * @param userNumList
      * @return
@@ -396,7 +398,7 @@ public class IamUserServiceImpl extends BaseServiceImpl<IamUserMapper, IamUser> 
     public void beforeUpdate(IamUser iamUser){
         if(isUserNumExists(iamUser.getId(), iamUser.getUserNum())){
             log.warn("保存用户异常: 员工编号{} 已存在，请重新设置！", iamUser.getUserNum());
-            throw new BusinessException(Status.FAIL_VALIDATION, "exception.business.userService.userNumExist");
+            throw new BusinessException(Status.FAIL_VALIDATION, "exception.business.userService.userNumExist", iamUser.getUserNum());
         }
     }
 

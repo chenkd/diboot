@@ -34,6 +34,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.extension.toolkit.ChainWrappers;
 import com.diboot.core.binding.Binder;
+import com.diboot.core.binding.JoinsBinder;
 import com.diboot.core.binding.cache.BindingCacheManager;
 import com.diboot.core.binding.helper.ServiceAdaptor;
 import com.diboot.core.binding.helper.WrapperHelper;
@@ -69,7 +70,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/***
+/**
  * CRUD通用接口实现类
  * @author mazc@dibo.ltd
  * @param <M> mapper类
@@ -81,7 +82,7 @@ import java.util.stream.Collectors;
 public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl<M, T> implements BaseService<T> {
 	private static final Logger log = LoggerFactory.getLogger(BaseServiceImpl.class);
 
-	/***
+	/**
 	 * 获取当前的Mapper对象
 	 * @return
 	 */
@@ -508,7 +509,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
                                                   SFunction<R, ?> followerIdGetter, Collection<? extends Serializable> followerIdList,
                                                   Consumer<QueryWrapper<R>> queryConsumer, Consumer<R> setConsumer) {
 		if (driverId == null) {
-			throw new InvalidUsageException("exception.invalidUsage.baseService.nullDriverId");
+			throw new InvalidUsageException("主动ID值不能为空！");
 		}
 		if (followerIdList == null) {
 			log.debug("从动对象ID集合为null，不做关联关系更新处理");
@@ -519,7 +520,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 		Class<R> middleTableClass = (Class<R>) lambdaMeta.getInstantiatedClass();
 		EntityInfoCache entityInfo = BindingCacheManager.getEntityInfoByClass(middleTableClass);
 		if (entityInfo == null) {
-			throw new InvalidUsageException("exception.invalidUsage.baseService.nonServiceOrMapper", middleTableClass.getName());
+			throw new InvalidUsageException("未找到 {} 的 Service 或 Mapper 定义！", middleTableClass.getName());
 		}
 		boolean isExistPk = entityInfo.getIdColumn() != null;
 
@@ -627,6 +628,10 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 
 	@Override
 	public <RE, R> boolean updateRelatedEntities(Serializable entityId, List<RE> relatedEntities, ISetter<RE, R> relatedEntitySetter) {
+		if(relatedEntities == null) {
+			log.debug("{}.{} 的关联数据为null，不做更新", getEntityClass().getSimpleName(), entityId);
+			return true;
+		}
 		// 获取关联entity的类
 		Class relatedEntityClass;
 		if(V.notEmpty(relatedEntities)){
@@ -831,6 +836,11 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 
 	@Override
 	public long getEntityListCount(Wrapper queryWrapper) {
+		// 如果是动态join，则调用JoinsBinder
+		if(queryWrapper instanceof DynamicJoinQueryWrapper) {
+			Class<?> entityClass = getEntityClass();
+			return JoinsBinder.queryCount((DynamicJoinQueryWrapper)queryWrapper, entityClass);
+		}
 		return super.count(queryWrapper);
 	}
 
@@ -907,7 +917,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 			query = ((LambdaQueryWrapper) queryWrapper);
 		}
 		else {
-			throw new InvalidUsageException("exception.invalidUsage.baseService.notSupportWrapper", (queryWrapper == null ? "null" : queryWrapper.getClass().getSimpleName()));
+			throw new InvalidUsageException("不支持的Wrapper类型：{}", (queryWrapper == null ? "null" : queryWrapper.getClass().getSimpleName()));
 		}
 		// 如果是动态join，则调用JoinsBinder
 		query.select(getterFn);
@@ -969,7 +979,8 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 	public <FT> boolean exists(SFunction<T, FT> getterFn, Object value) {
 		QueryWrapper<T> queryWrapper = new QueryWrapper();
 		String column = this.getColumnByField(BeanUtils.convertSFunctionToFieldName(getterFn));
-		queryWrapper.select(column).eq(column, value);
+		String pk = ContextHolder.getIdFieldName(getEntityClass());
+		queryWrapper.select(column).eq(column, value).orderByDesc(pk);
 		return exists(queryWrapper);
 	}
 
@@ -1044,7 +1055,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 		String sqlSelect = queryWrapper.getSqlSelect();
 		// 最少2个属性：label, value , (ext , parentId)
 		if(V.isEmpty(sqlSelect) || S.countMatches(sqlSelect, Cons.SEPARATOR_COMMA) < 1){
-			throw new InvalidUsageException("exception.invalidUsage.baseService.callGetLabelValueListFailed");
+			throw new InvalidUsageException("调用错误: getLabelValueList必须用select依次指定返回的 label,value(,ext)键值字段，如: new QueryWrapper<Dictionary>().lambda().select(Dictionary::getItemName, Dictionary::getItemValue)");
 		}
 		List<T> entityList = getEntityList(queryWrapper);
 		if(entityList == null){
@@ -1357,7 +1368,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 		}
 	}
 
-	/***
+	/**
 	 * 转换为IPage
 	 * @param pagination 分页
 	 * @return
@@ -1366,7 +1377,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 		return ServiceAdaptor.convertToIPage(pagination, getEntityClass());
 	}
 
-	/***
+	/**
 	 * 转换为IPage（已废弃）
 	 * @see #convertToIPage(Pagination)
 	 * @param queryWrapper 查询条件
@@ -1397,7 +1408,7 @@ public class BaseServiceImpl<M extends BaseCrudMapper<T>, T> extends ServiceImpl
 		return BeanUtils.getProperty(entity, pk);
 	}
 
-	/***
+	/**
 	 * 打印警告信息
 	 * @param method
 	 * @param message

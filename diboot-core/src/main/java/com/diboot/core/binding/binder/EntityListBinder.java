@@ -37,7 +37,7 @@ import java.util.*;
 public class EntityListBinder<T> extends EntityBinder<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityListBinder.class);
 
-    /***
+    /**
      * 构造方法
      * @param annotation
      * @param voList
@@ -52,7 +52,7 @@ public class EntityListBinder<T> extends EntityBinder<T> {
         }
     }
 
-    /***
+    /**
      * 构造方法
      * @param entityClass
      * @param voList
@@ -67,7 +67,7 @@ public class EntityListBinder<T> extends EntityBinder<T> {
             return;
         }
         if(V.isEmpty(refObjJoinCols)){
-            throw new InvalidUsageException("exception.invalidUsage.binder.parseConditionFailed");
+            throw new InvalidUsageException("调用错误：无法从condition中解析出字段关联.");
         }
         Map<String, List> valueEntityListMap = new HashMap<>();
         if(middleTable == null){

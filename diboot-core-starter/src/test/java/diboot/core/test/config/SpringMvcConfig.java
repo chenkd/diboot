@@ -24,6 +24,11 @@ import com.diboot.core.data.protect.DataEncryptHandler;
 import com.diboot.core.data.protect.DataMaskHandler;
 import com.diboot.core.data.protect.DefaultDataEncryptHandler;
 import com.diboot.core.data.protect.DefaultDataMaskHandler;
+import com.diboot.core.extension.sequence.DefaultSequenceGenerator;
+import com.diboot.core.extension.sequence.Part;
+import com.diboot.core.extension.sequence.SequenceGenerator;
+import com.diboot.core.extension.sequence.counter.MemoryCacheSeqCounter;
+import com.diboot.core.extension.sequence.counter.SeqCounter;
 import com.diboot.core.handler.DataAccessControlHandler;
 import com.diboot.core.serial.deserializer.LocalDateTimeDeserializer;
 import com.diboot.core.serial.serializer.BigDecimal2StringSerializer;
@@ -38,6 +43,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import diboot.core.test.binder.DataAccessPermissionTestImplForDepartment;
+import diboot.core.test.binder.entity.Problem;
 import org.mybatis.spring.annotation.MapperScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +55,7 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -61,10 +68,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 
-/***
+/**
  * Spring配置文件
  * @author mazc@dibo.ltd
  * @version v2.0
@@ -75,7 +84,6 @@ import java.util.TimeZone;
 @MapperScan({"com.diboot.core.mapper", "diboot.core.**.mapper"})
 public class SpringMvcConfig implements WebMvcConfigurer {
     private static final Logger log = LoggerFactory.getLogger(SpringMvcConfig.class);
-
 
     @Value("${spring.jackson.date-format:"+D.FORMAT_DATETIME_Y4MDHMS+"}")
     private String defaultDatePattern;
@@ -171,19 +179,10 @@ public class SpringMvcConfig implements WebMvcConfigurer {
      */
     @Override
     public void addFormatters(FormatterRegistry registry) {
-        registry.addConverter(new Date2LocalDateConverter());
-        registry.addConverter(new Date2LocalDateTimeConverter());
-        registry.addConverter(new LocalDate2DateConverter());
-        registry.addConverter(new LocalDateTime2DateConverter());
-        registry.addConverter(new LocalDateTime2StringConverter());
-        registry.addConverter(new SqlDate2LocalDateConverter());
-        registry.addConverter(new SqlDate2LocalDateTimeConverter());
-        registry.addConverter(new String2DateConverter());
-        registry.addConverter(new String2LocalDateConverter());
-        registry.addConverter(new String2LocalDateTimeConverter());
-        registry.addConverter(new String2BooleanConverter());
-        registry.addConverter(new String2MapConverter());
-        registry.addConverter(new Timestamp2LocalDateTimeConverter());
+        List<Converter> converterList = ContextHolder.getBeans(Converter.class);
+        if (converterList != null && !converterList.isEmpty()) {
+            converterList.forEach(registry::addConverter);
+        }
     }
 
     /**
@@ -193,7 +192,7 @@ public class SpringMvcConfig implements WebMvcConfigurer {
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         // 数据权限拦截器
-        interceptor.addInnerInterceptor(new DataPermissionInterceptor(dataAccessControlHandler()));
+        //interceptor.addInnerInterceptor(new DataPermissionInterceptor(new DataAccessControlHandler()));
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
     }
@@ -211,4 +210,28 @@ public class SpringMvcConfig implements WebMvcConfigurer {
     public DataScopeManager dataScopeManager() {
         return new DataAccessPermissionTestImplForDepartment();
     }
+
+    /**
+     * 计数器
+     */
+    @Bean
+    public SeqCounter memoryCacheSeqCounter() {
+        log.info("初始化 流水号计数器 内存缓存: MemoryCacheSeqCounter");
+        return new MemoryCacheSeqCounter();
+    }
+
+    @Bean
+    public SequenceGenerator sequenceGenerator(SeqCounter seqCounter) {
+        /*List<Part> parts = Part.cons("No.")
+                    .append(Part.date(D.FORMAT_DATE_y4Md))
+                    .append(Part.seq(4))
+                    .build();*/
+        List<Part> partList = Arrays.asList(
+            Part.cons("No."),
+            Part.date(D.FORMAT_DATE_y4Md),
+            Part.seq(4)
+        );
+        return new DefaultSequenceGenerator<>(seqCounter, Problem::getSn, partList);
+    }
+
 }

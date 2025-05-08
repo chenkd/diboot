@@ -27,7 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/***
+/**
  * JSON操作辅助类
  * @author mazc@dibo.ltd
  * @version v2.0
@@ -49,7 +49,7 @@ public class JSON {
         }
         objectMapper = ContextHolder.getBean(ObjectMapper.class);
         if(objectMapper == null){
-            throw new InvalidUsageException("exception.invalidUsage.JSON.getObjectMapper.message");
+            throw new InvalidUsageException("未找到 ObjectMapper实例，请检查配置类");
         }
         return objectMapper;
     }
@@ -80,7 +80,7 @@ public class JSON {
         }
     }
 
-    /***
+    /**
      * 将JSON字符串转换为java对象
      * @param jsonStr
      * @param clazz
@@ -96,7 +96,7 @@ public class JSON {
         }
     }
 
-    /***
+    /**
      * 将JSON字符串转换为Map<String, Object></>对象
      * @param jsonStr
      * @return
@@ -111,7 +111,7 @@ public class JSON {
         }
     }
 
-    /***
+    /**
      * 将JSON字符串转换为java对象
      * @param jsonStr
      * @param clazz
@@ -121,7 +121,7 @@ public class JSON {
         return toJavaObject(jsonStr, clazz);
     }
 
-    /***
+    /**
      * 将JSON字符串转换为复杂类型的Java对象
      * @param jsonStr
      * @param typeReference
@@ -138,7 +138,7 @@ public class JSON {
     }
 
 
-    /***
+    /**
      * 将JSON字符串转换为list对象
      * @param jsonStr
      * @param clazz
@@ -154,7 +154,7 @@ public class JSON {
         }
     }
 
-    /***
+    /**
      * 将JSON字符串转换为list对象
      * @param jsonStr
      * @param typeReference
@@ -169,7 +169,7 @@ public class JSON {
         }
     }
 
-    /***
+    /**
      * 将JSON字符串转换为java对象
      * @param jsonStr
      * @return
@@ -179,7 +179,7 @@ public class JSON {
         return (Map<K, T>) toJavaObject(jsonStr, Map.class);
     }
 
-    /***
+    /**
      * 将JSON字符串转换为Map对象
      * @param jsonStr
      * @return

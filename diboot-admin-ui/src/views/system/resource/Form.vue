@@ -3,7 +3,6 @@ import elementResizeDetectorMaker from 'element-resize-detector'
 import type { FormInstance } from 'element-plus'
 import type { Resource } from './type'
 import { Plus, Refresh, InfoFilled } from '@element-plus/icons-vue'
-import RouteSelect from './components/RouteSelect.vue'
 import PermissionSelect from './components/PermissionSelect.vue'
 import { checkValue } from '@/utils/validate-form'
 import { useI18n } from 'vue-i18n'
@@ -16,7 +15,7 @@ onBeforeUnmount(() => erd.uninstall(document.body))
 
 const baseApi = '/iam/resource'
 
-const props = defineProps<{ formValue?: Resource }>()
+const props = defineProps<{ formValue?: Resource; lendHeight?: string }>()
 
 const model = ref<Resource>()
 
@@ -25,7 +24,7 @@ watch(
   () => props.formValue,
   value => {
     reloadFormItem.value = !reloadFormItem.value
-    model.value = _.clone(value)
+    model.value = _.clone(value) as Resource
     configResource.value = model.value ?? {}
   }
 )
@@ -132,7 +131,7 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
       <el-row :gutter="5" style="width: 100%">
         <el-col :md="24" :lg="10">
           <div style="margin: 8px; zoom: 1.1">{{ $t('resource.menuConfig') }}</div>
-          <el-scrollbar :style="clientWidth >= 1200 ? { height: 'calc(100vh - 168px)' } : {}">
+          <el-scrollbar :style="clientWidth >= 1200 ? { height: `calc(100vh - 168px - ${lendHeight ?? '0px'})` } : {}">
             <el-form
               v-if="model"
               ref="formRef"
@@ -148,9 +147,9 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
               </el-form-item>
               <el-form-item :label="$t('resource.displayType')" prop="displayType">
                 <el-radio-group v-model="model.displayType">
-                  <el-radio-button label="CATALOGUE">{{ $t('resource.displayTypeOptions.catalogue') }}</el-radio-button>
-                  <el-radio-button label="MENU">{{ $t('resource.displayTypeOptions.menu') }}</el-radio-button>
-                  <el-radio-button label="OUTSIDE_URL">{{
+                  <el-radio-button value="CATALOGUE">{{ $t('resource.displayTypeOptions.catalogue') }}</el-radio-button>
+                  <el-radio-button value="MENU">{{ $t('resource.displayTypeOptions.menu') }}</el-radio-button>
+                  <el-radio-button value="OUTSIDE_URL">{{
                     $t('resource.displayTypeOptions.outsideUrl')
                   }}</el-radio-button>
                 </el-radio-group>
@@ -162,7 +161,7 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
               >
                 <el-input v-model="model.displayName" :placeholder="$t('resource.placeholder.displayName')" clearable>
                   <template v-if="enableI18n" #append>
-                    <i18n-selector v-model="model.displayNameI18n" />
+                    <i18n-selector v-model="model.displayNameI18n" :group="model.displayNameI18n" />
                   </template>
                 </el-input>
               </el-form-item>
@@ -184,16 +183,22 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
                   { validator: checkCodeDuplicate, trigger: 'blur' }
                 ]"
               >
-                <route-select
-                  v-show="model.displayType === 'MENU'"
-                  v-model="model.resourceCode"
-                  v-model:component-path="model.routeMeta.componentPath"
-                  @change="formRef?.validateField('resourceCode')"
-                />
                 <el-input
-                  v-show="model.displayType !== 'MENU'"
                   v-model="model.resourceCode"
                   :placeholder="$t('resource.placeholder.resourceCode')"
+                  clearable
+                  @change="formRef?.validateField('resourceCode')"
+                />
+              </el-form-item>
+              <el-form-item
+                v-if="!!model.routeMeta && model.displayType === 'MENU'"
+                :label="$t('resource.componentPath')"
+                prop="routeMeta.componentPath"
+                :rules="[{ required: true, message: i18n.t('rules.notnull'), trigger: 'blur' }]"
+              >
+                <el-input
+                  v-model="model.routeMeta.componentPath"
+                  :placeholder="$t('resource.placeholder.componentPath')"
                   clearable
                 />
               </el-form-item>
@@ -254,15 +259,19 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
                   </div>
                 </template>
                 <el-checkbox
-                  :key="reloadFormItem"
+                  :key="`${reloadFormItem}`"
                   v-model="model.status"
-                  true-label="A"
-                  false-label="I"
+                  true-value="A"
+                  false-value="I"
                   :label="$t('resource.status')"
                 />
-                <el-checkbox :key="reloadFormItem" v-model="model.routeMeta.hidden" :label="$t('resource.hidden')" />
                 <el-checkbox
-                  :key="reloadFormItem"
+                  :key="`${reloadFormItem}`"
+                  v-model="model.routeMeta.hidden"
+                  :label="$t('resource.hidden')"
+                />
+                <el-checkbox
+                  :key="`${reloadFormItem}`"
                   v-model="model.routeMeta.keepAlive"
                   :label="$t('resource.keepAlive')"
                 />
@@ -362,7 +371,7 @@ const enableI18n = import.meta.env.VITE_APP_ENABLE_I18N === 'true'
           </el-scrollbar>
         </el-col>
         <el-col :md="24" :lg="14">
-          <div :style="clientWidth >= 1200 ? { height: 'calc(100vh - 126px)' } : {}">
+          <div :style="clientWidth >= 1200 ? { height: `calc(100vh - 130px - ${lendHeight ?? '0px'})` } : {}">
             <permission-select
               ref="permissionSelectRef"
               v-model:permission-codes="configResource.permissionCodes"

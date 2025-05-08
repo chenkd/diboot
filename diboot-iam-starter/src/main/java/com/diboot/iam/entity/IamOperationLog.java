@@ -68,7 +68,7 @@ public class IamOperationLog extends BaseEntity<String> {
     private String operation;
 
     /**
-     * 用户类型
+     * 用户类型（如 IamUser）
      */
     @Length(max = 100, message = "{validation.iamOperationLog.userType.Length.message}")
     @TableField()
@@ -119,12 +119,11 @@ public class IamOperationLog extends BaseEntity<String> {
      * 状态码
      */
     @TableField()
-    private int statusCode;
+    private Integer statusCode;
 
     /**
      * 异常信息
      */
-    @Length(max = 1000, message = "{validation.iamOperationLog.errorMsg.Length.message}")
     @TableField()
     private String errorMsg;
 

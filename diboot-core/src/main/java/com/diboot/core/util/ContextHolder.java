@@ -55,7 +55,7 @@ import java.util.Map;
 public class ContextHolder implements ApplicationContextAware, ApplicationListener<ApplicationReadyEvent> {
     private static final Logger log = LoggerFactory.getLogger(ContextHolder.class);
 
-    /***
+    /**
      * ApplicationContext上下文
      */
     private static ApplicationContext APPLICATION_CONTEXT = null;
@@ -77,7 +77,7 @@ public class ContextHolder implements ApplicationContextAware, ApplicationListen
         log.debug("ApplicationContext已注入: {}", APPLICATION_CONTEXT.getDisplayName());
     }
 
-    /***
+    /**
      * 获取ApplicationContext上下文
      */
     public static ApplicationContext getApplicationContext() {
@@ -87,12 +87,12 @@ public class ContextHolder implements ApplicationContextAware, ApplicationListen
         }
         if(APPLICATION_CONTEXT == null){
             log.warn("无法获取ApplicationContext，请确保ComponentScan扫描路径包含com.diboot包路径，并在Spring初始化之后调用接口!");
-            new InvalidUsageException("exception.invalidUsage.contextHolder.getApplicationContext.message").printStackTrace();
+            new InvalidUsageException("检查调用时机").printStackTrace();
         }
         return APPLICATION_CONTEXT;
     }
 
-    /***
+    /**
      * 根据beanId获取Bean实例
      * @param beanId
      * @return
@@ -101,22 +101,24 @@ public class ContextHolder implements ApplicationContextAware, ApplicationListen
         return getApplicationContext().getBean(beanId);
     }
 
-    /***
+    /**
      * 获取指定类型的单个Bean实例
      * @param clazz
      * @return
      */
     public static <T> T getBean(Class<T> clazz){
-        try{
-            return getApplicationContext().getBean(clazz);
-        }
-        catch (Exception e){
+        List<T> clazzInstances = getBeans(clazz);
+        if(clazzInstances == null){
             log.debug("instance not found: {}", clazz.getSimpleName());
             return null;
         }
+        if(clazzInstances.size() > 1){
+            throw new InvalidUsageException("getBean({}.class) 识别到多个实例，请检查调用！", clazz.getSimpleName());
+        }
+        return clazzInstances.get(0);
     }
 
-    /***
+    /**
      * 获取指定类型的全部实现类
      * @param type
      * @param <T>
@@ -132,7 +134,7 @@ public class ContextHolder implements ApplicationContextAware, ApplicationListen
         return beanList;
     }
 
-    /***
+    /**
      * 根据注解获取beans
      * @param annotationType
      * @return
@@ -216,7 +218,7 @@ public class ContextHolder implements ApplicationContextAware, ApplicationListen
         return getIdFieldName(entity);
     }
 
-    /***
+    /**
      * 获取JdbcUrl
      * @return
      */

@@ -46,19 +46,19 @@ import java.util.*;
  */
 public abstract class BaseBinder<T> {
     private static final Logger log = LoggerFactory.getLogger(BaseBinder.class);
-    /***
+    /**
      * 需要绑定到的VO注解对象List
      */
     protected List<?> annoObjectList;
-    /***
+    /**
      * VO注解对象中的join on对象列名集合
      */
     protected List<String> annoObjJoinCols;
-    /***
+    /**
      * VO注解对象中的join on对象附加过滤条件
      */
     protected List<FieldComparison> annoObjJoinFieldComparisons;
-    /***
+    /**
      * DO对象中的关联join on对象列名集合
      */
     protected List<String> refObjJoinCols;
@@ -87,7 +87,7 @@ public abstract class BaseBinder<T> {
      */
     protected PropInfo refObjPropInfo;
 
-    public static final String NOT_SUPPORT_MSG = "exception.invalidUsage.baseBinder.notSupport";
+    public static final String NOT_SUPPORT_MSG = "中间表关联暂不支持涉及目标表多列的情况!";
 
     /**
      * ,拼接的多个id值
@@ -106,7 +106,7 @@ public abstract class BaseBinder<T> {
      */
     protected RemoteBindDTO remoteBindDTO;
 
-    /***
+    /**
      * 构造方法
      * @param entityClass
      * @param voList
@@ -197,7 +197,7 @@ public abstract class BaseBinder<T> {
                 fieldName = annoObjectFieldKey;
             }
             if(fieldName == null) {
-                throw new InvalidUsageException("exception.invalidUsage.baseBinder.joinOnFieldComparison.message", annoObjectFieldKey);
+                throw new InvalidUsageException("字段/列 {} 不存在", annoObjectFieldKey);
             }
             annoObjJoinFieldComparisons.add(new FieldComparison(fieldName, comparison, eqFilterConsVal));
         }
@@ -302,7 +302,7 @@ public abstract class BaseBinder<T> {
         return this.refObjJoinCols;
     }
 
-    /***
+    /**
      * 执行绑定, 交由子类实现
      */
     public abstract void bind();
@@ -527,7 +527,7 @@ public abstract class BaseBinder<T> {
         if(iService == null){
             // 本地绑定需确保有Service实现类
             if(moduleAnno == null){
-                throw new InvalidUsageException("exception.invalidUsage.baseBinder.getService.message", entityClass.getSimpleName());
+                throw new InvalidUsageException("{} 无 BaseService/IService实现类，无法执行注解绑定！", entityClass.getSimpleName());
             }
         }
         return iService;
@@ -568,7 +568,7 @@ public abstract class BaseBinder<T> {
         return value;
     }
 
-    /***
+    /**
      * 筛选list
      * @param objectList
      * @param filterConditions 附加过滤条件

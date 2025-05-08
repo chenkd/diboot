@@ -75,7 +75,7 @@ public class Cons {
      */
     public static final String ID_PREVENT_NULL = "0";
 
-    /***
+    /**
      * 常用字段名定义
      */
     public enum FieldName{
@@ -129,7 +129,7 @@ public class Cons {
         parentIdsPath
     }
 
-    /***
+    /**
      * 常用列名定义
      */
     public enum ColumnName{
@@ -307,5 +307,10 @@ public class Cons {
      * 国际化缓存
      */
     public static String CACHE_NAME_I18N = "diboot:i18n";
+
+    /**
+     * 系统配置缓存
+     */
+    public static String CACHE_NAME_SYSTEM_CONFIG = "diboot:system-config";
 
 }

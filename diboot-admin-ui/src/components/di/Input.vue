@@ -4,7 +4,11 @@ import type { FormItem, Select, Upload } from './type'
 import type { UploadRawFile, UploadFile, FormItemRule, CascaderNode, CascaderOption } from 'element-plus'
 import { checkValue } from '@/utils/validate-form'
 import { useI18n } from 'vue-i18n'
+
 const i18n = useI18n()
+
+const RichEditor = defineAsyncComponent(() => import('../rich/Editor.vue'))
+const RichRead = defineAsyncComponent(() => import('../rich/Read.vue'))
 
 const props = withDefaults(
   defineProps<{
@@ -143,6 +147,8 @@ const convert2accept = (accept?: string) => {
     })
     .join(',')
 }
+
+defineExpose({ getFiles: () => _.cloneDeep(unref(fileList)) })
 </script>
 
 <template>
@@ -293,7 +299,7 @@ const convert2accept = (accept?: string) => {
       @change="handleChange"
       @update:model-value="value = $event"
     >
-      <el-checkbox v-for="(item, index) in relatedDatas" :key="index" :label="item.value">{{ item.label }}</el-checkbox>
+      <el-checkbox v-for="(item, index) in relatedDatas" :key="index" :value="item.value">{{ item.label }}</el-checkbox>
     </el-checkbox-group>
     <el-radio-group
       v-if="config.type === 'radio'"
@@ -302,7 +308,7 @@ const convert2accept = (accept?: string) => {
       @change="handleChange"
       @update:model-value="value = $event"
     >
-      <el-radio v-for="(item, index) in relatedDatas" :key="index" :label="item.value">{{ item.label }}</el-radio>
+      <el-radio v-for="(item, index) in relatedDatas" :key="index" :value="item.value">{{ item.label }}</el-radio>
     </el-radio-group>
     <di-selector
       v-if="config.type === 'list-selector'"

@@ -40,7 +40,7 @@ import java.util.Map;
 public class FieldListBinder<T> extends FieldBinder<T> {
     private static final Logger log = LoggerFactory.getLogger(FieldListBinder.class);
 
-    /***
+    /**
      * 构造方法
      * @param annotation
      * @param voList
@@ -61,10 +61,10 @@ public class FieldListBinder<T> extends FieldBinder<T> {
             return;
         }
         if(V.isEmpty(refObjJoinCols)){
-            throw new InvalidUsageException("exception.invalidUsage.binder.parseConditionFailed");
+            throw new InvalidUsageException("调用错误：无法从condition中解析出字段关联.");
         }
         if(referencedGetterFieldNameList == null){
-            throw new InvalidUsageException("exception.invalidUsage.binder.bindField.nonField");
+            throw new InvalidUsageException("调用错误：字段绑定必须指定字段field");
         }
         Map<String, List> valueEntityListMap = new HashMap<>();
         // 直接关联
@@ -164,7 +164,7 @@ public class FieldListBinder<T> extends FieldBinder<T> {
         }
     }
 
-    /***
+    /**
      * 从对象集合提取某个属性值到list中
      * @param fromList
      * @param trunkObjColMapping

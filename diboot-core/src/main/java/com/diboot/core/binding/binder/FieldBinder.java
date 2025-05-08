@@ -45,7 +45,7 @@ public class FieldBinder<T> extends BaseBinder<T> {
      */
     protected List<String> referencedGetterFieldNameList;
 
-    /***
+    /**
      * 构造方法
      * @param entityClass
      * @param voList
@@ -54,7 +54,7 @@ public class FieldBinder<T> extends BaseBinder<T> {
         super(entityClass, voList);
     }
 
-    /***
+    /**
      * 构造方法
      * @param annotation
      * @param voList
@@ -63,7 +63,7 @@ public class FieldBinder<T> extends BaseBinder<T> {
         super(annotation.entity(), voList);
     }
 
-    /***
+    /**
      * 指定VO绑定属性赋值的setter和DO/Entity取值的getter方法
      * @param toVoSetter VO中调用赋值的setter方法
      * @param <T1> VO类型
@@ -75,7 +75,7 @@ public class FieldBinder<T> extends BaseBinder<T> {
         return link(BeanUtils.convertToFieldName(fromDoGetter), BeanUtils.convertToFieldName(toVoSetter));
     }
 
-    /***
+    /**
      * 指定VO绑定赋值的setter属性名和DO/Entity取值的getter属性名
      * @param toVoField VO中调用赋值的setter属性名
      * @return
@@ -98,10 +98,10 @@ public class FieldBinder<T> extends BaseBinder<T> {
             return;
         }
         if(V.isEmpty(refObjJoinCols)){
-            throw new InvalidUsageException("exception.invalidUsage.binder.parseConditionFailed");
+            throw new InvalidUsageException("调用错误：无法从condition中解析出字段关联.");
         }
         if(referencedGetterFieldNameList == null){
-            throw new InvalidUsageException("exception.invalidUsage.binder.bindField.nonField");
+            throw new InvalidUsageException("调用错误：字段绑定必须指定字段field");
         }
         // 直接关联
         if(middleTable == null){

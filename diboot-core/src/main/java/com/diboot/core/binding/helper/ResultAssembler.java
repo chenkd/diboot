@@ -34,7 +34,7 @@ import java.util.*;
 @Slf4j
 public class ResultAssembler {
 
-    /***
+    /**
      * 从对象集合提取某个属性值到list中
      * @param setterFieldName
      * @param fromList
@@ -43,7 +43,7 @@ public class ResultAssembler {
      * @param <E>
      */
     public static <E> void bindCountPropValue(String setterFieldName, List<E> fromList, String[] getterFields, Map valueMatchMap){
-        if(V.isEmpty(fromList) || V.isEmpty(valueMatchMap)){
+        if(V.isEmpty(fromList)){
             return;
         }
         try{
@@ -92,7 +92,7 @@ public class ResultAssembler {
         }
     }
 
-    /***
+    /**
      * 从对象集合提取某个属性值到list中
      * @param setterFieldName
      * @param fromList
@@ -168,7 +168,7 @@ public class ResultAssembler {
         }
     }
 
-    /***
+    /**
      * 从对象集合提取某个属性值到list中
      * @param setterFieldName
      * @param fromList
@@ -215,7 +215,7 @@ public class ResultAssembler {
     }
 
 
-    /***
+    /**
      * 从对象集合提取某个属性值到list中
      * @param fromList
      * @param getterFields

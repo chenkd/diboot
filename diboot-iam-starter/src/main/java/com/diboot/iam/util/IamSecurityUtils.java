@@ -79,7 +79,7 @@ public class IamSecurityUtils extends SecurityUtils {
                 log.warn("缓存中不存在的无效token: {}", accessToken);
             }
         } else {
-            throw new InvalidUsageException("exception.invalidUsage.iamSecurityUtils.getLoginUserByToken.message");
+            throw new InvalidUsageException("无法获取登录用户缓存，请检查依赖环境！");
         }
         return null;
     }
@@ -91,7 +91,7 @@ public class IamSecurityUtils extends SecurityUtils {
         BaseLoginUser user = getCurrentUser();
         if (user != null) {
             try {
-                ContextHolder.getBean(IamLoginTraceService.class).updateLogoutInfo(user.getClass().getSimpleName(), user.getId());
+                ContextHolder.getBean(IamLoginTraceService.class).updateLogoutInfo(user.getAuthToken(), user.getClass().getSimpleName(), user.getId());
             } catch (Exception e) {
                 log.warn("更新用户退出时间异常: {}", e.getMessage());
             }
@@ -120,9 +120,9 @@ public class IamSecurityUtils extends SecurityUtils {
             if (userTypeAndId.equals(user.getUserTypeAndId())) {
                 cacheManager.getCache(Cons.AUTHENTICATION_CAHCE_NAME).remove(authInfo.getCredentials());
                 TokenUtils.removeAccessTokens(principalCollection.toString());
-                log.info("强制退出用户: {}", userTypeAndId);
+                log.info("强制退出用户: {} ，token: {} 失效", userTypeAndId, principalCollection);
                 try {
-                    iamLoginTraceService.updateLogoutInfo(user.getClass().getSimpleName(), user.getId());
+                    iamLoginTraceService.updateLogoutInfo(user.getAuthToken(), user.getClass().getSimpleName(), user.getId());
                 } catch (Exception e) {
                     log.warn("更新用户 {} 退出时间异常: {}", userTypeAndId, e.getMessage());
                 }
@@ -224,7 +224,7 @@ public class IamSecurityUtils extends SecurityUtils {
         }
     }
 
-    /***
+    /**
      * 对用户密码加密
      * @param iamAccount
      */
@@ -239,7 +239,7 @@ public class IamSecurityUtils extends SecurityUtils {
         }
     }
 
-    /***
+    /**
      * 对用户密码加密
      * @param password
      * @param salt

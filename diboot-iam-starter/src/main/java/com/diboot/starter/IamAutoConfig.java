@@ -16,12 +16,15 @@
 package com.diboot.starter;
 
 import com.diboot.core.cache.BaseCacheManager;
+import com.diboot.core.cache.DictionaryCacheManager;
 import com.diboot.core.cache.DynamicMemoryCacheManager;
 import com.diboot.core.util.V;
+import com.diboot.iam.cache.SystemConfigCacheManager;
 import com.diboot.iam.config.Cons;
 import com.diboot.iam.config.IamProperties;
 import com.diboot.iam.init.IamRedisAutoConfig;
 import com.diboot.iam.shiro.IamAuthorizingRealm;
+import com.diboot.iam.shiro.ShiroContextTaskDecorator;
 import com.diboot.iam.shiro.StatelessAccessControlFilter;
 import com.diboot.iam.shiro.StatelessSubjectFactory;
 import jakarta.servlet.Filter;
@@ -35,7 +38,6 @@ import org.apache.shiro.event.support.DefaultEventBus;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.mgt.*;
 import org.apache.shiro.realm.Realm;
-import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.spring.web.config.DefaultShiroFilterChainDefinition;
@@ -43,6 +45,8 @@ import org.apache.shiro.spring.web.config.ShiroFilterChainDefinition;
 import org.apache.shiro.web.filter.AccessControlFilter;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.mgt.DefaultWebSubjectFactory;
+import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
+import org.apache.shiro.web.session.mgt.WebSessionManager;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,9 +56,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.HashMap;
@@ -153,8 +155,8 @@ public class IamAutoConfig {
     @Bean
     @ConditionalOnMissingBean
     @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
-    public DefaultSessionManager sessionManager() {
-        DefaultSessionManager sessionManager = new DefaultSessionManager();
+    public WebSessionManager sessionManager() {
+        DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
         sessionManager.setSessionValidationSchedulerEnabled(false);
         return sessionManager;
     }
@@ -164,8 +166,6 @@ public class IamAutoConfig {
      *
      * @return
      */
-//    @Bean
-//    @ConditionalOnMissingBean
     public AccessControlFilter shiroFilter() {
         return new StatelessAccessControlFilter();
     }
@@ -207,8 +207,8 @@ public class IamAutoConfig {
         filterChainMap.put("/auth/captcha", "anon");
         filterChainMap.put("/auth/login", "anon");
         filterChainMap.put("/auth/token", "anon");
-        filterChainMap.put("/auth/2step-code", "anon");
-        filterChainMap.put("/file/*/image", "anon");
+
+        filterChainMap.put("/client/login", "anon");
 
         Set<String> anonUrls = iamProperties.getAnonUrls();
         if (V.notEmpty(anonUrls)) {
@@ -218,7 +218,7 @@ public class IamAutoConfig {
         }
         filterChainMap.put("/login", "authc");
         if (V.notEmpty(anonUrls) && anonUrls.contains("/**") && !iamProperties.isEnablePermissionCheck()) {
-            log.info("权限检查已停用，该配置仅用于开发环境 !");
+            log.warn("权限检查已停用，该配置仅用于开发环境 !");
             filterChainMap.put("/**", "anon");
         } else {
             filterChainMap.put("/**", "accessControlFilter");
@@ -241,11 +241,12 @@ public class IamAutoConfig {
      * @return
      */
     @Bean(name = "iamCacheManager")
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(name = "iamCacheManager")
     public BaseCacheManager iamCacheManager() {
         log.info("初始化 IAM 内存缓存: DynamicMemoryCacheManager");
         Map<String, Integer> cacheName2ExpireMap = new HashMap<String, Integer>() {{
             put(Cons.CACHE_TOKEN_USERINFO, iamProperties.getTokenExpiresMinutes());
+            put(Cons.CACHE_TOKEN_REFRESH, 10);
             put(Cons.CACHE_CAPTCHA, 5);
         }};
         return new DynamicMemoryCacheManager(cacheName2ExpireMap);
@@ -254,26 +255,23 @@ public class IamAutoConfig {
     @Configuration
     private class ThreadPoolTaskExecutorConfig {
         public ThreadPoolTaskExecutorConfig(@Qualifier("applicationTaskExecutor") ObjectProvider<ThreadPoolTaskExecutor> taskExecutorObjectProvider) {
-            taskExecutorObjectProvider.ifAvailable(taskExecutor -> taskExecutor.setTaskDecorator(new ShiroContextDecorator()));
+            log.info("初始化: ThreadPoolTaskExecutor 指定子线程传递用户信息");
+            taskExecutorObjectProvider.ifAvailable(taskExecutor -> taskExecutor.setTaskDecorator(new ShiroContextTaskDecorator()));
         }
     }
 
     /**
-     * shiro上下文装饰器，传递shiro上下文
+     * 系统配置数据缓存管理器
      */
-    private class ShiroContextDecorator implements TaskDecorator {
-
-        @Override
-        public Runnable decorate(Runnable runnable) {
-            try {
-                LocaleContextHolder.setLocale(LocaleContextHolder.getLocale(), true);
-                // 向下传递当前线程的用户信息
-                return SecurityUtils.getSubject().associateWith(runnable);
-            } catch (UnavailableSecurityManagerException e) {
-                // 用户信息不存在，直接执行
-                return runnable;
-            }
-        }
+    @Bean
+    @ConditionalOnMissingBean
+    public SystemConfigCacheManager systemConfigCacheManager() {
+        log.info("初始化 SystemConfig 内存缓存: DynamicMemoryCacheManager");
+        Map<String, Integer> cacheName2ExpireMap = new HashMap<>() {{
+            put(com.diboot.core.config.Cons.CACHE_NAME_SYSTEM_CONFIG, 24 * 60);
+        }};
+        DynamicMemoryCacheManager memoryCacheManager = new DynamicMemoryCacheManager(cacheName2ExpireMap);
+        return new SystemConfigCacheManager(memoryCacheManager);
     }
 
 }

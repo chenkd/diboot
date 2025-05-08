@@ -15,9 +15,9 @@
  */
 package com.diboot.file.excel.cache;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.diboot.core.binding.annotation.BindDict;
+import com.diboot.core.config.BaseConfig;
 import com.diboot.core.exception.InvalidUsageException;
 import com.diboot.core.service.BaseService;
 import com.diboot.core.service.DictionaryServiceExtProvider;
@@ -29,11 +29,13 @@ import com.diboot.core.vo.LabelValue;
 import com.diboot.file.excel.annotation.ExcelBindDict;
 import com.diboot.file.excel.annotation.ExcelBindField;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * 绑定注解的辅助类
@@ -107,7 +109,7 @@ public class ExcelBindAnnoHandler {
             }
             DictionaryServiceExtProvider bindDictService = ContextHolder.getBean(DictionaryServiceExtProvider.class);
             if(bindDictService == null){
-                throw new InvalidUsageException("exception.invalidUsage.excelBindAnnoHandler.convertToNameValueMap.message");
+                throw new InvalidUsageException("DictionaryService未实现，无法使用ExcelBindDict注解！");
             }
             List<LabelValue> list = bindDictService.getLabelValueList(dictType);
             return convertLabelValueListToMap(list);
@@ -131,11 +133,14 @@ public class ExcelBindAnnoHandler {
         if(V.isEmpty(nameList)){
             return Collections.emptyMap();
         }
+        nameList = nameList.stream().flatMap(e -> Stream.concat(Stream.of(S.split(e)), Stream.of(e))).filter(V::notEmpty).distinct().toList();
         BaseService service = ContextHolder.getBaseServiceByEntity(bindField.entity());
         String nameColumn = S.toSnakeCase(bindField.field());
         String idColumn = ContextHolder.getIdColumnName(bindField.entity());
-        QueryWrapper queryWrapper = Wrappers.query().select(nameColumn, idColumn).in(nameColumn, nameList);
-        List<LabelValue> list = service.getLabelValueList(queryWrapper);
+        List<LabelValue> list = new LinkedList<>();
+        ListUtils.partition(nameList, BaseConfig.getBatchSize()).forEach(subList -> {
+            list.addAll(service.getLabelValueList(Wrappers.query().select(nameColumn, idColumn).in(nameColumn, subList)));
+        });
         return convertLabelValueListToMap(list);
     }
 

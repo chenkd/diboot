@@ -37,6 +37,7 @@ import com.diboot.core.util.*;
 import com.diboot.core.vo.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import diboot.core.test.StartupApplication;
+import diboot.core.test.binder.dto.DepartmentDTO;
 import diboot.core.test.binder.dto.UserDTO;
 import diboot.core.test.binder.entity.*;
 import diboot.core.test.binder.mapper.UserRoleMapper;
@@ -90,6 +91,8 @@ public class BaseServiceTest {
     RegionService regionService;
     @Autowired
     private UserRoleMapper userRoleMapper;
+    @Autowired
+    DataScopeManager dataScopeManager;
 
     @Test
     public void testGet(){
@@ -550,8 +553,7 @@ public class BaseServiceTest {
 
     @Test
     public void testGetEntityList(){
-        DataScopeManager checkImpl = ContextHolder.getBean(DataScopeManager.class);
-        Assert.assertTrue(checkImpl != null);
+        Assert.assertTrue(dataScopeManager != null);
         QueryWrapper<Dictionary> queryWrapper = new QueryWrapper<>();
         queryWrapper.select("id", "item_name", "item_value")
                 .eq("id", -1L);
@@ -712,6 +714,16 @@ public class BaseServiceTest {
         // 检查缓存
         cacheList = dictionaryCacheManager.getCachedItems(TYPE);
         Assert.assertTrue(cacheList == null);
+    }
+
+    @Test
+    public void testGetEntityListCount() {
+        // 加载测试数据
+        DepartmentDTO departmentDTO = new DepartmentDTO();
+        departmentDTO.setParentId(10001L);
+        QueryWrapper<Department> queryWrapper = QueryBuilder.toQueryWrapper(departmentDTO);
+        long count = departmentService.getEntityListCount(queryWrapper);
+        Assert.assertTrue(count > 1);
     }
 
 }

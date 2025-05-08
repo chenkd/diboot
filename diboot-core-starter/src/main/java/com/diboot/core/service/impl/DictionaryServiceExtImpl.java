@@ -18,7 +18,6 @@ package com.diboot.core.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.diboot.core.binding.RelationsBinder;
 import com.diboot.core.cache.DictionaryCacheManager;
 import com.diboot.core.config.Cons;
 import com.diboot.core.entity.Dictionary;
@@ -26,6 +25,7 @@ import com.diboot.core.exception.BusinessException;
 import com.diboot.core.mapper.DictionaryMapper;
 import com.diboot.core.service.DictionaryService;
 import com.diboot.core.service.DictionaryServiceExtProvider;
+import com.diboot.core.service.I18nConfigService;
 import com.diboot.core.util.BeanUtils;
 import com.diboot.core.util.S;
 import com.diboot.core.util.V;
@@ -56,6 +56,9 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
 
     @Autowired
     private DictionaryCacheManager dictionaryCacheManager;
+
+    @Autowired(required = false)
+    private I18nConfigService i18nConfigService;
 
     /**
      * 数据变动前先清空缓存
@@ -120,17 +123,17 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
     public List<LabelValue> getLabelValueList(String type) {
         // 根据类型查询并返回
         List<Dictionary> dictionaryList = getEntityListByType(type);
-        RelationsBinder.bind(dictionaryList);
-        return dictionaryList.stream()
-                .map(Dictionary::toLabelValue)
-                .collect(Collectors.toList());
+        if(V.isEmpty(dictionaryList)){
+            log.warn("字典 {} 无任何选项定义！", type);
+            return Collections.emptyList();
+        }
+        return convertToLabelValueList(dictionaryList);
     }
 
     @Override
     public Map<String, LabelValue> getLabel2ItemMap(String type) {
         // 根据类型查询并返回
         List<Dictionary> dictionaryList = getEntityListByType(type);
-        RelationsBinder.bind(dictionaryList);
         return dictionaryList.stream().collect(
                 Collectors.toMap(Dictionary::getItemName, Dictionary::toLabelValue));
     }
@@ -139,7 +142,6 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
     public Map<String, LabelValue> getValue2ItemMap(String type) {
         // 根据类型查询并返回
         List<Dictionary> dictionaryList = getEntityListByType(type);
-        RelationsBinder.bind(dictionaryList);
         return dictionaryList.stream().collect(
                 Collectors.toMap(Dictionary::getItemValue, Dictionary::toLabelValue));
     }
@@ -212,7 +214,7 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
         dictVO
                 .setIsDeletable(oldDictionary.getIsDeletable())
                 .setIsEditable(oldDictionary.getIsEditable());
-        if(!super.updateEntity(dictVO)){
+        if(!updateEntity(oldDictionary.getItemName(), dictVO)){
             log.warn("更新数据字典定义失败，type={}", dictVO.getType());
             return false;
         }
@@ -233,7 +235,8 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
                     .setIsEditable(dictVO.getIsEditable());
                 if(V.notEmpty(dict.getId())){
                     dictItemIds.add(dict.getId());
-                    if(!super.updateEntity(dict)){
+                    Optional<Dictionary> oldDictOpt = oldDictList.stream().filter(d->d.getId().equals(dict.getId())).findFirst();
+                    if(oldDictOpt.isPresent() && !updateEntity(oldDictOpt.get().getItemName(), dict)){
                         log.warn("更新字典子项失败，itemName={}", dict.getItemName());
                         throw new BusinessException(Status.FAIL_EXCEPTION, "exception.business.dictionaryService.updateItem");
                     }
@@ -257,6 +260,22 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
             }
         }
         return true;
+    }
+
+    /**
+     * 更新i18n国际化
+     * @param oldDictItemName
+     * @param newDict
+     * @return
+     */
+    private boolean updateEntity(String oldDictItemName, Dictionary newDict){
+        if(i18nConfigService != null) {
+            if(V.notEquals(oldDictItemName, newDict.getItemName())) {
+                i18nConfigService.updateI18nContent("zh_CN", newDict.getItemNameI18n(), newDict.getItemName());
+                log.debug("字典 {} 的国际化中文内容已更改为 {}", oldDictItemName, newDict.getItemName());
+            }
+        }
+        return super.updateEntity(newDict);
     }
 
     /**
@@ -376,7 +395,7 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
         }
     }
 
-    /***
+    /**
      * 构建排序编号
      * @param dictList
      */
@@ -387,6 +406,31 @@ public class DictionaryServiceExtImpl extends BaseServiceImpl<DictionaryMapper, 
         for (int i = 0; i < dictList.size(); i++) {
             Dictionary dict = dictList.get(i);
             dict.setSortId(i);
+        }
+    }
+
+    /**
+     * 转换为 List<LabelValue>（如启用i18n，则翻译）
+     * @param dictList
+     * @return
+     */
+    private List<LabelValue> convertToLabelValueList(List<Dictionary> dictList) {
+        if(i18nConfigService == null) {
+            return dictList.stream().map(Dictionary::toLabelValue).collect(Collectors.toList());
+        }
+        else {
+            // i18n 翻译
+            List<String> itemI18nMap = dictList.stream().map(Dictionary::getItemNameI18n).filter(V::notEmpty).collect(Collectors.toList());
+            Map<String, String> i18nKeyValMap = i18nConfigService.translate(itemI18nMap);
+            List<LabelValue> items = new ArrayList<>(dictList.size());
+            for(Dictionary dictionary : dictList){
+                LabelValue item = dictionary.toLabelValue();
+                if(i18nKeyValMap.containsKey(dictionary.getItemNameI18n())){
+                    item.setLabel(i18nKeyValMap.get(dictionary.getItemNameI18n()));
+                }
+                items.add(item);
+            }
+            return items;
         }
     }
 

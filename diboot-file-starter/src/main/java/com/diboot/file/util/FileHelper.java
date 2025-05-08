@@ -35,20 +35,25 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-/***
+/**
  * 文件操作辅助类
  * @author mazc@dibo.ltd
  * @version v2.0
  */
 @Slf4j
 public class FileHelper{
+
 	/**
-	 * file验证
+	 * file 合法文件后缀
 	 */
-	public static final List<String> DANGER_FILE_SUFFIX = Arrays.asList("exe","bat","bin","dll","sh","php","pl","py","cgi","asp","aspx","jsp","php5","php4","php3","js","htm","html","go");
+	public static final List<String> DEFAULT_VALID_EXT_LIST = Arrays.asList(
+		"txt", "pdf", "xml",
+		"csv", "xls", "xlsx", "doc", "docx", "dot", "ppt", "pptx",
+		"bmp", "gif", "jpeg", "jpg", "png", "mp3", "avi", "wav", "wmf",
+		"zip","rar","gz", "bz2"
+	);
 
 	/**
 	 * excel格式
@@ -82,13 +87,24 @@ public class FileHelper{
 	 */
     private static Boolean isLocalStorage;
 
-	/***
+	/**
 	 * 是否为合法的文件类型
-	 * @param ext
+	 * @param fileName
 	 * @return
 	 */
-	public static boolean isValidFileExt(String ext){
-		return !DANGER_FILE_SUFFIX.contains(ext.toLowerCase());
+	public static boolean isValidFileExt(String fileName) {
+		return isValidFileExt(fileName, null);
+	}
+
+	/**
+	 * 是否为合法的文件类型
+	 * @param fileName
+	 * @param additionalValidExts 附加支持的文件后缀
+	 * @return
+	 */
+	public static boolean isValidFileExt(String fileName, List<String> additionalValidExts){
+		String ext = FileHelper.getFileExtByName(fileName).toLowerCase();
+		return DEFAULT_VALID_EXT_LIST.contains(ext) || (additionalValidExts != null && additionalValidExts.contains(ext));
 	}
 
 	/**
@@ -115,7 +131,7 @@ public class FileHelper{
         return Boolean.TRUE.equals(isLocalStorage);
     }
 
-	/***
+	/**
 	 * 获取系统临时目录
 	 * @return
 	 */
@@ -123,7 +139,7 @@ public class FileHelper{
 		return System.getProperty("java.io.tmpdir");
 	}
 
-	/***
+	/**
 	 * 上传文件
 	 * @param file 上传文件
 	 * @param fileName 文件名
@@ -147,7 +163,7 @@ public class FileHelper{
 		}
 	}
 
-	/***
+	/**
 	 * 上传文件
 	 * @param inputStream 文件流
 	 * @param fileName 文件名
@@ -171,7 +187,7 @@ public class FileHelper{
 		}
 	}
 
-	/***
+	/**
 	 * 根据名称取得后缀
 	 * @param fileName
 	 * @return
@@ -190,7 +206,7 @@ public class FileHelper{
 		return "";
 	}
 
-	/***
+	/**
 	 * 获取文件的相对路径
 	 * @param fileName 仅文件名，不含相对路径
 	 * @return
@@ -201,7 +217,7 @@ public class FileHelper{
 		return sb.toString();
 	}
 
-	/***
+	/**
 	 * 获取文件的完整存储路径
 	 * @param fileName 仅文件名，不含相对路径
 	 * @return
@@ -232,13 +248,13 @@ public class FileHelper{
 		if(fileStorageDirectory == null){
 			fileStorageDirectory = PropertiesUtils.get(FILE_STORAGE_DIRECTORY);
 			if(fileStorageDirectory == null){
-				throw new InvalidUsageException("exception.invalidUsage.fileHelper.getFileStorageDirectory.message", FILE_STORAGE_DIRECTORY);
+				throw new InvalidUsageException("文件存储路径参数 {} 未配置.", FILE_STORAGE_DIRECTORY);
 			}
 		}
 		return fileStorageDirectory;
 	}
 
-	/***
+	/**
 	 * 创建文件夹
 	 * @param dirPath
 	 * @return
@@ -259,7 +275,7 @@ public class FileHelper{
 		return false;
 	}
 
-	/****
+	/**
 	 * 删除文件
 	 * @param fileStoragePath
 	 */
